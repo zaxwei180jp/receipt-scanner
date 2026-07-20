@@ -1,0 +1,8 @@
+{
+  "name": "receipt-scanner",
+  "version": "1.0.0",
+  "description": "Receipt OCR and Notion database sync",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.24.0"
+  }
+}

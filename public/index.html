@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>收據掃描器</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(135deg, #f5ede6 0%, #ebe4dd 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding-top: 20px;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      color: #5a4a42;
+      margin-bottom: 5px;
+      font-weight: 600;
+    }
+
+    .header p {
+      color: #8b7b73;
+      font-size: 14px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .upload-zone {
+      border: 2px dashed #c9b9ae;
+      border-radius: 8px;
+      padding: 30px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: #faf8f6;
+    }
+
+    .upload-zone:hover {
+      border-color: #9d8b80;
+      background: #f5f1ed;
+    }
+
+    .upload-zone.dragging {
+      border-color: #6b5b52;
+      background: #ede4d9;
+    }
+
+    .upload-zone input[type="file"] {
+      display: none;
+    }
+
+    .upload-icon {
+      font-size: 40px;
+      margin-bottom: 10px;
+    }
+
+    .upload-text {
+      color: #5a4a42;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+
+    .upload-hint {
+      color: #9d8b80;
+      font-size: 12px;
+    }
+
+    .preview-img {
+      max-width: 100%;
+      max-height: 300px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 20px;
+      color: #8b7b73;
+      font-size: 14px;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #c9b9ae;
+      border-top-color: #5a4a42;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .form-section {
+      display: none;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #5a4a42;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #dcc9bc;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+      color: #3a2a22;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #9d8b80;
+      background: #faf8f6;
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .items-list {
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid #dcc9bc;
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 15px;
+      background: #faf8f6;
+    }
+
+    .item-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 8px;
+      padding: 8px;
+      background: white;
+      border-radius: 4px;
+      font-size: 12px;
+      border: 1px solid #ede4d9;
+    }
+
+    .item-name {
+      flex: 1;
+      color: #3a2a22;
+    }
+
+    .item-price {
+      color: #8b7b73;
+      min-width: 50px;
+      text-align: right;
+    }
+
+    .error {
+      padding: 12px;
+      background: #fde8e8;
+      border: 1px solid #f5c9c9;
+      border-radius: 6px;
+      color: #8b4444;
+      font-size: 13px;
+      margin-bottom: 15px;
+      display: none;
+    }
+
+    .error.show {
+      display: block;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-primary {
+      background: #5a4a42;
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #3a2a22;
+    }
+
+    .btn-primary:disabled {
+      background: #c9b9ae;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: #5a4a42;
+      border: 1px solid #c9b9ae;
+    }
+
+    .btn-secondary:hover {
+      background: #f5ede6;
+      border-color: #9d8b80;
+    }
+
+    .success {
+      padding: 12px;
+      background: #e8f5e8;
+      border: 1px solid #c9e8c9;
+      border-radius: 6px;
+      color: #2d5a2d;
+      font-size: 13px;
+      display: none;
+    }
+
+    .success.show {
+      display: block;
+    }
+
+    @media (max-width: 600px) {
+      .header h1 {
+        font-size: 24px;
+      }
+
+      .card {
+        padding: 16px;
+      }
+
+      .button-group {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📝 收據掃描器</h1>
+      <p>拍照或上傳收據，自動提取品項</p>
+    </div>
+
+    <div class="card">
+      <div class="upload-zone" id="uploadZone">
+        <div class="upload-icon">📷</div>
+        <div class="upload-text">點擊上傳或拖放收據照片</div>
+        <div class="upload-hint">支援 JPG, PNG</div>
+        <input type="file" id="fileInput" accept="image/*" capture="environment">
+      </div>
+
+      <div class="preview-img" id="preview" style="display: none;"></div>
+
+      <div class="loading" id="loading">
+        <span class="spinner"></span>掃描中...
+      </div>
+
+      <div class="error" id="error"></div>
+      <div class="success" id="success"></div>
+    </div>
+
+    <div class="form-section" id="formSection">
+      <div class="card">
+        <h3 style="margin-bottom: 15px; font-size: 16px; color: #5a4a42;">確認資料</h3>
+
+        <div class="form-group">
+          <label>日期</label>
+          <input type="date" id="date" required>
+        </div>
+
+        <div class="form-group">
+          <label>店舗</label>
+          <input type="text" id="store" placeholder="APPRO">
+        </div>
+
+        <div class="form-group">
+          <label>品項（已自動提取）</label>
+          <div class="items-list" id="itemsList"></div>
+        </div>
+
+        <div class="form-group">
+          <label>主分類</label>
+          <select id="category">
+            <option value="">-- 選擇 --</option>
+            <option value="食物">🥬 食物</option>
+            <option value="日用品">🧴 日用品</option>
+            <option value="其他">📦 其他</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>子分類</label>
+          <select id="subCategory">
+            <option value="">-- 選擇 --</option>
+            <option value="蔬果">蔬果</option>
+            <option value="肉類">肉類</option>
+            <option value="乳製品">乳製品</option>
+            <option value="調味料">調味料</option>
+            <option value="零食">零食</option>
+            <option value="清潔">清潔</option>
+            <option value="衛生">衛生</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>備註</label>
+          <textarea id="notes" placeholder="任何補充資訊..."></textarea>
+        </div>
+
+        <div class="button-group">
+          <button class="btn btn-secondary" onclick="resetForm()">重新掃描</button>
+          <button class="btn btn-primary" id="saveBtn" onclick="saveToNotion()">儲存到 Notion</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const preview = document.getElementById('preview');
+    const loading = document.getElementById('loading');
+    const error = document.getElementById('error');
+    const success = document.getElementById('success');
+    const formSection = document.getElementById('formSection');
+    const dateInput = document.getElementById('date');
+    const itemsList = document.getElementById('itemsList');
+
+    // 設定今天的日期
+    dateInput.valueAsDate = new Date();
+
+    // 上傳區域點擊
+    uploadZone.addEventListener('click', () => fileInput.click());
+
+    // 拖放
+    uploadZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadZone.classList.add('dragging');
+    });
+
+    uploadZone.addEventListener('dragleave', () => {
+      uploadZone.classList.remove('dragging');
+    });
+
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('dragging');
+      const files = e.dataTransfer.files;
+      if (files.length > 0) handleFile(files[0]);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) handleFile(e.target.files[0]);
+    });
+
+    async function handleFile(file) {
+      if (!file.type.startsWith('image/')) {
+        showError('請選擇圖片檔案');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const imageData = e.target.result;
+        preview.innerHTML = `<img src="${imageData}" class="preview-img">`;
+        preview.style.display = 'block';
+        uploadZone.style.display = 'none';
+
+        loading.style.display = 'block';
+        error.classList.remove('show');
+        success.classList.remove('show');
+
+        try {
+          const response = await fetch('/api/parse-receipt', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: imageData })
+          });
+
+          if (!response.ok) throw new Error('解析失敗');
+          const data = await response.json();
+          
+          itemsList.innerHTML = '';
+          if (data.items && data.items.length > 0) {
+            data.items.forEach(item => {
+              const row = document.createElement('div');
+              row.className = 'item-row';
+              row.innerHTML = `
+                <div class="item-name">${item.name}</div>
+                <div class="item-price">¥${item.price}</div>
+              `;
+              itemsList.appendChild(row);
+            });
+          }
+
+          loading.style.display = 'none';
+          formSection.style.display = 'block';
+        } catch (err) {
+          loading.style.display = 'none';
+          showError(err.message);
+          uploadZone.style.display = 'block';
+          preview.style.display = 'none';
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function resetForm() {
+      uploadZone.style.display = 'block';
+      preview.style.display = 'none';
+      formSection.style.display = 'none';
+      fileInput.value = '';
+      itemsList.innerHTML = '';
+      error.classList.remove('show');
+      success.classList.remove('show');
+    }
+
+    async function saveToNotion() {
+      const saveBtn = document.getElementById('saveBtn');
+      saveBtn.disabled = true;
+
+      const items = [];
+      document.querySelectorAll('.item-row').forEach(row => {
+        const name = row.querySelector('.item-name').textContent;
+        const price = row.querySelector('.item-price').textContent.replace('¥', '');
+        items.push({ name, price: parseFloat(price) });
+      });
+
+      const payload = {
+        date: dateInput.value,
+        store: document.getElementById('store').value || 'APPRO',
+        items,
+        category: document.getElementById('category').value,
+        subCategory: document.getElementById('subCategory').value,
+        notes: document.getElementById('notes').value
+      };
+
+      try {
+        const response = await fetch('/api/save-notion', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) throw new Error('儲存失敗');
+        
+        showSuccess('已儲存到 Notion！');
+        setTimeout(() => resetForm(), 2000);
+      } catch (err) {
+        showError('儲存失敗: ' + err.message);
+      } finally {
+        saveBtn.disabled = false;
+      }
+    }
+
+    function showError(msg) {
+      error.textContent = msg;
+      error.classList.add('show');
+    }
+
+    function showSuccess(msg) {
+      success.textContent = msg;
+      success.classList.add('show');
+    }
+  </script>
+</body>
+</html>
