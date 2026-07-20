@@ -69,10 +69,6 @@
       background: #ede4d9;
     }
 
-    .upload-zone input[type="file"] {
-      display: none;
-    }
-
     .upload-icon {
       font-size: 40px;
       margin-bottom: 10px;
@@ -296,9 +292,14 @@
     <div class="card">
       <div class="upload-zone" id="uploadZone">
         <div class="upload-icon">📷</div>
-        <div class="upload-text">點擊上傳或拖放收據照片</div>
-        <div class="upload-hint">支援 JPG, PNG</div>
-        <input type="file" id="fileInput" accept="image/*" capture="environment">
+        <div class="upload-text">選擇收據照片</div>
+        <div class="upload-hint" style="margin-bottom: 15px;">支援 JPG, PNG</div>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+          <button type="button" class="btn btn-secondary" style="flex: none; padding: 10px 20px;" onclick="document.getElementById('cameraInput').click()">📷 拍照</button>
+          <button type="button" class="btn btn-secondary" style="flex: none; padding: 10px 20px;" onclick="document.getElementById('fileInput').click()">🖼️ 相簿</button>
+        </div>
+        <input type="file" id="fileInput" accept="image/*" style="display:none;">
+        <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none;">
       </div>
 
       <div class="preview-img" id="preview" style="display: none;"></div>
@@ -381,8 +382,11 @@
     // 設定今天的日期
     dateInput.valueAsDate = new Date();
 
-    // 上傳區域點擊
-    uploadZone.addEventListener('click', () => fileInput.click());
+    const cameraInput = document.getElementById('cameraInput');
+
+    cameraInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) handleFile(e.target.files[0]);
+    });
 
     // 拖放
     uploadZone.addEventListener('dragover', (e) => {
