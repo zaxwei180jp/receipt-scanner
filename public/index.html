@@ -69,6 +69,10 @@
       background: #ede4d9;
     }
 
+    .upload-zone input[type="file"] {
+      display: none;
+    }
+
     .upload-icon {
       font-size: 40px;
       margin-bottom: 10px;
@@ -170,13 +174,65 @@
 
     .item-row {
       display: flex;
-      gap: 10px;
-      margin-bottom: 8px;
-      padding: 8px;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 10px;
+      padding: 10px;
       background: white;
       border-radius: 4px;
       font-size: 12px;
       border: 1px solid #ede4d9;
+    }
+
+    .item-row-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .item-original {
+      color: #b0a299;
+      font-size: 11px;
+    }
+
+    .item-row-selects {
+      display: flex;
+      gap: 6px;
+    }
+
+    .item-row-selects select {
+      flex: 1;
+      padding: 6px;
+      font-size: 11px;
+      border: 1px solid #dcc9bc;
+      border-radius: 4px;
+      color: #3a2a22;
+      background: #faf8f6;
+    }
+
+    .stat-bar-row {
+      margin-bottom: 12px;
+    }
+
+    .stat-bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #5a4a42;
+      margin-bottom: 4px;
+    }
+
+    .stat-bar-track {
+      background: #ede4d9;
+      border-radius: 4px;
+      height: 8px;
+      overflow: hidden;
+    }
+
+    .stat-bar-fill {
+      background: #9d8b80;
+      height: 100%;
+      border-radius: 4px;
     }
 
     .item-name {
@@ -327,32 +383,8 @@
         </div>
 
         <div class="form-group">
-          <label>品項（已自動提取）</label>
+          <label>品項（已自動翻譯＋分類，可調整）</label>
           <div class="items-list" id="itemsList"></div>
-        </div>
-
-        <div class="form-group">
-          <label>主分類</label>
-          <select id="category">
-            <option value="">-- 選擇 --</option>
-            <option value="食物">🥬 食物</option>
-            <option value="日用品">🧴 日用品</option>
-            <option value="其他">📦 其他</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label>子分類</label>
-          <select id="subCategory">
-            <option value="">-- 選擇 --</option>
-            <option value="蔬果">蔬果</option>
-            <option value="肉類">肉類</option>
-            <option value="乳製品">乳製品</option>
-            <option value="調味料">調味料</option>
-            <option value="零食">零食</option>
-            <option value="清潔">清潔</option>
-            <option value="衛生">衛生</option>
-          </select>
         </div>
 
         <div class="form-group">
@@ -363,6 +395,17 @@
         <div class="button-group">
           <button class="btn btn-secondary" onclick="resetForm()">重新掃描</button>
           <button class="btn btn-primary" id="saveBtn" onclick="saveToNotion()">儲存到 Notion</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section" id="statsSection">
+      <div class="card">
+        <h3 style="margin-bottom: 15px; font-size: 16px; color: #5a4a42;">📊 累計花費佔比</h3>
+        <div id="statsTotal" style="font-size: 13px; color: #8b7b73; margin-bottom: 12px;"></div>
+        <div id="statsBreakdown"></div>
+        <div class="button-group">
+          <button class="btn btn-primary" onclick="resetForm()">掃描下一張收據</button>
         </div>
       </div>
     </div>
@@ -381,6 +424,48 @@
 
     // 設定今天的日期
     dateInput.valueAsDate = new Date();
+
+    let parsedItems = [];
+
+    const MAIN_CATEGORIES = ['食物', '日用品', '其他'];
+    const SUB_CATEGORIES = ['蔬果', '肉類', '蛋類', '乳製品', '飲料', '加工食品', '調味料', '零食', '清潔', '衛生', '其他'];
+
+    function renderItems() {
+      itemsList.innerHTML = '';
+      parsedItems.forEach((item, idx) => {
+        const row = document.createElement('div');
+        row.className = 'item-row';
+        row.innerHTML = `
+          <div class="item-row-top">
+            <div>
+              <div>${item.translated}</div>
+              <div class="item-original">${item.original || ''}</div>
+            </div>
+            <div class="item-price">¥${item.price}</div>
+          </div>
+          <div class="item-row-selects">
+            <select data-idx="${idx}" class="cat-select">
+              ${MAIN_CATEGORIES.map(c => `<option value="${c}" ${c === item.category ? 'selected' : ''}>${c}</option>`).join('')}
+            </select>
+            <select data-idx="${idx}" class="subcat-select">
+              ${SUB_CATEGORIES.map(c => `<option value="${c}" ${c === item.subCategory ? 'selected' : ''}>${c}</option>`).join('')}
+            </select>
+          </div>
+        `;
+        itemsList.appendChild(row);
+      });
+
+      itemsList.querySelectorAll('.cat-select').forEach(el => {
+        el.addEventListener('change', (e) => {
+          parsedItems[e.target.dataset.idx].category = e.target.value;
+        });
+      });
+      itemsList.querySelectorAll('.subcat-select').forEach(el => {
+        el.addEventListener('change', (e) => {
+          parsedItems[e.target.dataset.idx].subCategory = e.target.value;
+        });
+      });
+    }
 
     const cameraInput = document.getElementById('cameraInput');
 
@@ -435,19 +520,9 @@
 
           if (!response.ok) throw new Error('解析失敗');
           const data = await response.json();
-          
-          itemsList.innerHTML = '';
-          if (data.items && data.items.length > 0) {
-            data.items.forEach(item => {
-              const row = document.createElement('div');
-              row.className = 'item-row';
-              row.innerHTML = `
-                <div class="item-name">${item.name}</div>
-                <div class="item-price">¥${item.price}</div>
-              `;
-              itemsList.appendChild(row);
-            });
-          }
+
+          parsedItems = data.items || [];
+          renderItems();
 
           loading.style.display = 'none';
           formSection.style.display = 'block';
@@ -465,7 +540,10 @@
       uploadZone.style.display = 'block';
       preview.style.display = 'none';
       formSection.style.display = 'none';
+      document.getElementById('statsSection').style.display = 'none';
       fileInput.value = '';
+      cameraInput.value = '';
+      parsedItems = [];
       itemsList.innerHTML = '';
       error.classList.remove('show');
       success.classList.remove('show');
@@ -475,19 +553,10 @@
       const saveBtn = document.getElementById('saveBtn');
       saveBtn.disabled = true;
 
-      const items = [];
-      document.querySelectorAll('.item-row').forEach(row => {
-        const name = row.querySelector('.item-name').textContent;
-        const price = row.querySelector('.item-price').textContent.replace('¥', '');
-        items.push({ name, price: parseFloat(price) });
-      });
-
       const payload = {
         date: dateInput.value,
         store: document.getElementById('store').value || 'APPRO',
-        items,
-        category: document.getElementById('category').value,
-        subCategory: document.getElementById('subCategory').value,
+        items: parsedItems,
         notes: document.getElementById('notes').value
       };
 
@@ -499,13 +568,47 @@
         });
 
         if (!response.ok) throw new Error('儲存失敗');
-        
-        showSuccess('已儲存到 Notion！');
-        setTimeout(() => resetForm(), 2000);
+
+        showSuccess('已儲存到 Notion！正在計算統計...');
+        formSection.style.display = 'none';
+        await loadStats();
       } catch (err) {
         showError('儲存失敗: ' + err.message);
       } finally {
         saveBtn.disabled = false;
+      }
+    }
+
+    async function loadStats() {
+      try {
+        const response = await fetch('/api/stats');
+        if (!response.ok) throw new Error('統計讀取失敗');
+        const data = await response.json();
+
+        document.getElementById('statsTotal').textContent =
+          `共 ${data.recordCount} 筆紀錄，累計 ¥${data.grandTotal.toLocaleString()}`;
+
+        const breakdown = document.getElementById('statsBreakdown');
+        breakdown.innerHTML = '';
+
+        data.categoryBreakdown.forEach(cat => {
+          const row = document.createElement('div');
+          row.className = 'stat-bar-row';
+          row.innerHTML = `
+            <div class="stat-bar-label">
+              <span>${cat.name}</span>
+              <span>¥${cat.total.toLocaleString()}（${cat.percentage}%）</span>
+            </div>
+            <div class="stat-bar-track">
+              <div class="stat-bar-fill" style="width: ${cat.percentage}%;"></div>
+            </div>
+          `;
+          breakdown.appendChild(row);
+        });
+
+        document.getElementById('statsSection').style.display = 'block';
+      } catch (err) {
+        showError('統計讀取失敗: ' + err.message);
       }
     }
 
