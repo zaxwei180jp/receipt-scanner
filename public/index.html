@@ -543,7 +543,7 @@
 <body>
   <div class="container">
     <div class="header">
-      <button class="back-btn" id="backBtn" style="display:none;" onclick="showHome()">← 返回</button>
+      <button class="back-btn" id="backBtn" style="display:none;">← 返回</button>
       <h1 id="pageTitle">📝 收據掃描器</h1>
       <p id="pageSubtitle">拍照上傳，自動翻譯、分類、統計</p>
     </div>
@@ -630,15 +630,9 @@
     <!-- QUERY SCREEN -->
     <div class="screen" id="queryScreen">
       <div class="card">
-        <div class="form-row">
-          <div class="form-group">
-            <label>開始日期</label>
-            <input type="date" id="queryStart">
-          </div>
-          <div class="form-group">
-            <label>結束日期</label>
-            <input type="date" id="queryEnd">
-          </div>
+        <div class="form-group">
+          <label>日期（不選則查全部）</label>
+          <input type="date" id="queryDate">
         </div>
 
         <div class="form-group">
@@ -752,29 +746,35 @@
     const pageSubtitle = document.getElementById('pageSubtitle');
     const backBtn = document.getElementById('backBtn');
 
-    function switchScreen(id, title, subtitle, showBack) {
+    function switchScreen(id, title, subtitle, backAction) {
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
       document.getElementById(id).classList.add('active');
       pageTitle.textContent = title;
       pageSubtitle.textContent = subtitle;
-      backBtn.style.display = showBack ? 'block' : 'none';
+      if (backAction) {
+        backBtn.style.display = 'block';
+        backBtn.onclick = backAction;
+      } else {
+        backBtn.style.display = 'none';
+        backBtn.onclick = null;
+      }
     }
 
     function showHome() {
-      switchScreen('homeScreen', '📝 收據掃描器', '拍照上傳，自動翻譯、分類、統計', false);
+      switchScreen('homeScreen', '📝 收據掃描器', '拍照上傳，自動翻譯、分類、統計', null);
       loadStats();
     }
 
     function showScan() {
-      switchScreen('scanScreen', '📷 掃描收據', '拍照或上傳收據照片', true);
+      switchScreen('scanScreen', '📷 掃描收據', '拍照或上傳收據照片', showHome);
     }
 
     function showQuery() {
-      switchScreen('queryScreen', '🔍 查詢紀錄', '依日期、分類或關鍵字搜尋', true);
+      switchScreen('queryScreen', '🔍 查詢紀錄', '依日期、分類或關鍵字搜尋', showHome);
     }
 
     function showAnalysis() {
-      switchScreen('analysisScreen', '📊 月度分析', '累積各月消費趨勢與排行', true);
+      switchScreen('analysisScreen', '📊 月度分析', '累積各月消費趨勢與排行', showHome);
       loadAnalysis();
     }
 
@@ -996,9 +996,10 @@
       const queryError = document.getElementById('queryError');
       queryError.classList.remove('show');
 
+      const selectedDate = document.getElementById('queryDate').value || undefined;
       const payload = {
-        startDate: document.getElementById('queryStart').value || undefined,
-        endDate: document.getElementById('queryEnd').value || undefined,
+        startDate: selectedDate,
+        endDate: selectedDate,
         category: document.getElementById('queryCategory').value || undefined,
         keyword: document.getElementById('queryKeyword').value || undefined
       };
@@ -1149,7 +1150,7 @@
 
       document.getElementById('editError').classList.remove('show');
       document.getElementById('editSuccess').classList.remove('show');
-      switchScreen('editScreen', '✏️ 編輯紀錄', '修改品項資料', true);
+      switchScreen('editScreen', '✏️ 編輯紀錄', '修改品項資料', showQuery);
     }
 
     async function saveEdit() {
