@@ -28,7 +28,7 @@ export default async function handler(req, res) {
         '日期': {
           date: { start: date }
         },
-        '店舗': {
+        '店鋪': {
           rich_text: [{ text: { content: store } }]
         },
         '金額': {
