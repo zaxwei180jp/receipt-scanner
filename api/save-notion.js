@@ -23,7 +23,7 @@ export default async function handler(req, res) {
     for (const item of items) {
       const properties = {
         '品項': {
-          title: [{ text: { content: item.name } }]
+          title: [{ text: { content: item.translated || item.name } }]
         },
         '日期': {
           date: { start: date }
@@ -39,22 +39,31 @@ export default async function handler(req, res) {
         }
       };
 
-      // Add optional properties if provided
-      if (category) {
+      const itemCategory = item.category || category;
+      const itemSubCategory = item.subCategory || subCategory;
+
+      if (itemCategory) {
         properties['主分類'] = {
-          select: { name: category }
+          select: { name: itemCategory }
         };
       }
 
-      if (subCategory) {
+      if (itemSubCategory) {
         properties['子分類'] = {
-          select: { name: subCategory }
+          select: { name: itemSubCategory }
         };
       }
 
+      const noteParts = [];
+      if (item.original && item.original !== item.translated) {
+        noteParts.push(`原文: ${item.original}`);
+      }
       if (notes) {
+        noteParts.push(notes);
+      }
+      if (noteParts.length > 0) {
         properties['備註'] = {
-          rich_text: [{ text: { content: notes } }]
+          rich_text: [{ text: { content: noteParts.join(' | ') } }]
         };
       }
 
