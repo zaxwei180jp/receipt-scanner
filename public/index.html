@@ -685,6 +685,53 @@
 
       <div class="error" id="analysisError"></div>
     </div>
+
+    <!-- EDIT SCREEN -->
+    <div class="screen" id="editScreen">
+      <div class="card">
+        <div class="form-row">
+          <div class="form-group">
+            <label>日期</label>
+            <input type="date" id="editDate">
+          </div>
+          <div class="form-group">
+            <label>店鋪</label>
+            <input type="text" id="editStore">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>品項名稱</label>
+          <input type="text" id="editName">
+        </div>
+
+        <div class="form-group">
+          <label>金額</label>
+          <input type="number" id="editAmount">
+        </div>
+
+        <div class="form-group">
+          <label>分類</label>
+          <div class="item-row-selects">
+            <select id="editCategory"></select>
+            <select id="editSubCategory"></select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>備註</label>
+          <textarea id="editNotes"></textarea>
+        </div>
+
+        <div class="error" id="editError"></div>
+        <div class="success" id="editSuccess"></div>
+
+        <div class="button-group">
+          <button class="btn btn-secondary" onclick="deleteRecord()" style="color:#8b4444; border-color:#f5c9c9;">🗑️ 刪除</button>
+          <button class="btn btn-primary" onclick="saveEdit()">儲存修改</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -982,6 +1029,7 @@
         data.records.forEach(r => {
           const row = document.createElement('div');
           row.className = 'query-result-row';
+          row.style.cursor = 'pointer';
           row.innerHTML = `
             <div class="query-result-top">
               <span>${r.name}</span>
@@ -989,6 +1037,7 @@
             </div>
             <div class="query-result-meta">${r.date} · ${r.store} · ${r.category}${r.subCategory ? ' / ' + r.subCategory : ''}</div>
           `;
+          row.addEventListener('click', () => openEdit(r));
           list.appendChild(row);
         });
       } catch (err) {
@@ -1060,6 +1109,107 @@
       } catch (err) {
         analysisError.textContent = err.message;
         analysisError.classList.add('show');
+      }
+    }
+
+    // ---------- Edit / Delete ----------
+    let editingId = null;
+
+    const editCategorySelect = document.getElementById('editCategory');
+    const editSubCategorySelect = document.getElementById('editSubCategory');
+
+    MAIN_CATEGORIES.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c;
+      opt.textContent = c;
+      editCategorySelect.appendChild(opt);
+    });
+
+    function refreshEditSubCategoryOptions() {
+      const cat = editCategorySelect.value;
+      const subs = CATEGORY_MAP[cat] || [];
+      editSubCategorySelect.innerHTML = subs.map(s => `<option value="${s}">${s}</option>`).join('');
+    }
+
+    editCategorySelect.addEventListener('change', refreshEditSubCategoryOptions);
+
+    function openEdit(record) {
+      editingId = record.id;
+      document.getElementById('editDate').value = record.date;
+      document.getElementById('editStore').value = record.store;
+      document.getElementById('editName').value = record.name;
+      document.getElementById('editAmount').value = record.amount;
+      document.getElementById('editNotes').value = record.notes || '';
+
+      editCategorySelect.value = MAIN_CATEGORIES.includes(record.category) ? record.category : MAIN_CATEGORIES[0];
+      refreshEditSubCategoryOptions();
+      if (CATEGORY_MAP[editCategorySelect.value]?.includes(record.subCategory)) {
+        editSubCategorySelect.value = record.subCategory;
+      }
+
+      document.getElementById('editError').classList.remove('show');
+      document.getElementById('editSuccess').classList.remove('show');
+      switchScreen('editScreen', '✏️ 編輯紀錄', '修改品項資料', true);
+    }
+
+    async function saveEdit() {
+      const editError = document.getElementById('editError');
+      const editSuccess = document.getElementById('editSuccess');
+      editError.classList.remove('show');
+      editSuccess.classList.remove('show');
+
+      const payload = {
+        id: editingId,
+        name: document.getElementById('editName').value,
+        date: document.getElementById('editDate').value,
+        store: document.getElementById('editStore').value,
+        amount: parseFloat(document.getElementById('editAmount').value) || 0,
+        category: editCategorySelect.value,
+        subCategory: editSubCategorySelect.value,
+        notes: document.getElementById('editNotes').value
+      };
+
+      try {
+        const response = await fetch('/api/update-record', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) throw new Error('儲存失敗');
+
+        editSuccess.textContent = '已更新！';
+        editSuccess.classList.add('show');
+        setTimeout(() => {
+          showQuery();
+          runQuery();
+        }, 800);
+      } catch (err) {
+        editError.textContent = err.message;
+        editError.classList.add('show');
+      }
+    }
+
+    async function deleteRecord() {
+      if (!confirm('確定要刪除這筆紀錄嗎？')) return;
+
+      const editError = document.getElementById('editError');
+      editError.classList.remove('show');
+
+      try {
+        const response = await fetch('/api/delete-record', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: editingId })
+        });
+
+        if (!response.ok) throw new Error('刪除失敗');
+
+        showQuery();
+        runQuery();
+      } catch (err) {
+        editError.textContent = err.message;
+        editError.classList.add('show');
       }
     }
 
