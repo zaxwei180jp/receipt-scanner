@@ -16,10 +16,12 @@
       background: linear-gradient(135deg, #f5ede6 0%, #ebe4dd 100%);
       min-height: 100vh;
       padding: 20px;
+      overflow-x: hidden;
     }
 
     .container {
       max-width: 600px;
+      width: 100%;
       margin: 0 auto;
     }
 
@@ -71,6 +73,20 @@
 
     .upload-zone input[type="file"] {
       display: none;
+    }
+
+    .upload-btn-group {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      width: 100%;
+      margin-top: 5px;
+    }
+
+    .upload-btn-group .btn {
+      flex: 1;
+      max-width: 160px;
+      padding: 12px 10px;
     }
 
     .upload-icon {
@@ -320,12 +336,24 @@
     }
 
     @media (max-width: 600px) {
+      body {
+        padding: 12px;
+      }
+
       .header h1 {
-        font-size: 24px;
+        font-size: 22px;
       }
 
       .card {
-        padding: 16px;
+        padding: 14px;
+      }
+
+      .upload-zone {
+        padding: 20px 12px;
+      }
+
+      .upload-btn-group .btn {
+        max-width: none;
       }
 
       .button-group {
@@ -350,9 +378,9 @@
         <div class="upload-icon">📷</div>
         <div class="upload-text">選擇收據照片</div>
         <div class="upload-hint" style="margin-bottom: 15px;">支援 JPG, PNG</div>
-        <div style="display: flex; gap: 10px; justify-content: center;">
-          <button type="button" class="btn btn-secondary" style="flex: none; padding: 10px 20px;" onclick="document.getElementById('cameraInput').click()">📷 拍照</button>
-          <button type="button" class="btn btn-secondary" style="flex: none; padding: 10px 20px;" onclick="document.getElementById('fileInput').click()">🖼️ 相簿</button>
+        <div class="upload-btn-group">
+          <button type="button" class="btn btn-secondary" onclick="document.getElementById('cameraInput').click()">📷 拍照</button>
+          <button type="button" class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">🖼️ 相簿</button>
         </div>
         <input type="file" id="fileInput" accept="image/*" style="display:none;">
         <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none;">
@@ -378,7 +406,7 @@
         </div>
 
         <div class="form-group">
-          <label>店舗</label>
+          <label>店鋪</label>
           <input type="text" id="store" placeholder="APPRO">
         </div>
 
@@ -427,12 +455,27 @@
 
     let parsedItems = [];
 
-    const MAIN_CATEGORIES = ['食物', '日用品', '其他'];
-    const SUB_CATEGORIES = ['蔬果', '肉類', '蛋類', '乳製品', '飲料', '加工食品', '調味料', '零食', '清潔', '衛生', '其他'];
+    const CATEGORY_MAP = {
+      '生鮮食材': ['肉類', '海鮮', '蔬菜', '水果'],
+      '蛋奶製品': ['雞蛋', '牛奶', '起司', '優格'],
+      '健康飲品': ['果汁', '豆乳', '功能飲料'],
+      '加工食品': ['冷凍食品', '熟食', '火鍋料', '罐頭'],
+      '調味料': ['調味料'],
+      '麵包甜點': ['麵包甜點'],
+      '日用品': ['清潔用品', '廚房用品', '生活用品'],
+      '其他': ['其他']
+    };
+    const MAIN_CATEGORIES = Object.keys(CATEGORY_MAP);
 
     function renderItems() {
       itemsList.innerHTML = '';
       parsedItems.forEach((item, idx) => {
+        // Guard against category/subCategory not in our map
+        if (!CATEGORY_MAP[item.category]) item.category = '其他';
+        if (!CATEGORY_MAP[item.category].includes(item.subCategory)) {
+          item.subCategory = CATEGORY_MAP[item.category][0];
+        }
+
         const row = document.createElement('div');
         row.className = 'item-row';
         row.innerHTML = `
@@ -448,7 +491,7 @@
               ${MAIN_CATEGORIES.map(c => `<option value="${c}" ${c === item.category ? 'selected' : ''}>${c}</option>`).join('')}
             </select>
             <select data-idx="${idx}" class="subcat-select">
-              ${SUB_CATEGORIES.map(c => `<option value="${c}" ${c === item.subCategory ? 'selected' : ''}>${c}</option>`).join('')}
+              ${CATEGORY_MAP[item.category].map(c => `<option value="${c}" ${c === item.subCategory ? 'selected' : ''}>${c}</option>`).join('')}
             </select>
           </div>
         `;
@@ -457,7 +500,10 @@
 
       itemsList.querySelectorAll('.cat-select').forEach(el => {
         el.addEventListener('change', (e) => {
-          parsedItems[e.target.dataset.idx].category = e.target.value;
+          const idx = e.target.dataset.idx;
+          parsedItems[idx].category = e.target.value;
+          parsedItems[idx].subCategory = CATEGORY_MAP[e.target.value][0];
+          renderItems();
         });
       });
       itemsList.querySelectorAll('.subcat-select').forEach(el => {
