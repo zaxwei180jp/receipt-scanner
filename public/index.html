@@ -27,12 +27,13 @@
 
     .header {
       text-align: center;
-      margin-bottom: 30px;
+      margin-bottom: 20px;
       padding-top: 20px;
+      position: relative;
     }
 
     .header h1 {
-      font-size: 28px;
+      font-size: 26px;
       color: #5a4a42;
       margin-bottom: 5px;
       font-weight: 600;
@@ -40,7 +41,50 @@
 
     .header p {
       color: #8b7b73;
+      font-size: 13px;
+    }
+
+    .back-btn {
+      position: absolute;
+      left: 0;
+      top: 22px;
+      background: none;
+      border: none;
+      color: #5a4a42;
       font-size: 14px;
+      cursor: pointer;
+      padding: 6px 10px;
+    }
+
+    .nav-btn-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .nav-btn {
+      flex: 1;
+      padding: 16px 10px;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      background: white;
+      color: #5a4a42;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .nav-btn .icon {
+      font-size: 22px;
+    }
+
+    .nav-btn:active {
+      background: #f5ede6;
     }
 
     .card {
@@ -51,42 +95,20 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     }
 
-    .upload-zone {
-      border: 2px dashed #c9b9ae;
-      border-radius: 8px;
-      padding: 30px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.3s;
-      background: #faf8f6;
-    }
-
-    .upload-zone:hover {
-      border-color: #9d8b80;
-      background: #f5f1ed;
-    }
-
-    .upload-zone.dragging {
-      border-color: #6b5b52;
-      background: #ede4d9;
-    }
-
-    .upload-zone input[type="file"] {
+    .screen {
       display: none;
     }
 
-    .upload-btn-group {
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-      width: 100%;
-      margin-top: 5px;
+    .screen.active {
+      display: block;
     }
 
-    .upload-btn-group .btn {
-      flex: 1;
-      max-width: 160px;
-      padding: 12px 10px;
+    .upload-zone {
+      border: 2px dashed #c9b9ae;
+      border-radius: 8px;
+      padding: 30px 15px;
+      text-align: center;
+      background: #faf8f6;
     }
 
     .upload-icon {
@@ -103,6 +125,20 @@
     .upload-hint {
       color: #9d8b80;
       font-size: 12px;
+      margin-bottom: 15px;
+    }
+
+    .upload-btn-group {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .upload-btn-group .btn {
+      flex: 1;
+      max-width: 160px;
+      padding: 12px 10px;
     }
 
     .preview-img {
@@ -120,6 +156,10 @@
       font-size: 14px;
     }
 
+    .loading.show {
+      display: block;
+    }
+
     .spinner {
       display: inline-block;
       width: 16px;
@@ -133,10 +173,6 @@
 
     @keyframes spin {
       to { transform: rotate(360deg); }
-    }
-
-    .form-section {
-      display: none;
     }
 
     .form-group {
@@ -163,6 +199,7 @@
       font-size: 14px;
       font-family: inherit;
       color: #3a2a22;
+      background: white;
     }
 
     .form-group input:focus,
@@ -178,8 +215,17 @@
       min-height: 80px;
     }
 
+    .form-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .form-row .form-group {
+      flex: 1;
+    }
+
     .items-list {
-      max-height: 300px;
+      max-height: 320px;
       overflow-y: auto;
       border: 1px solid #dcc9bc;
       border-radius: 6px;
@@ -226,6 +272,12 @@
       background: #faf8f6;
     }
 
+    .item-price {
+      color: #8b7b73;
+      min-width: 50px;
+      text-align: right;
+    }
+
     .stat-bar-row {
       margin-bottom: 12px;
     }
@@ -251,15 +303,50 @@
       border-radius: 4px;
     }
 
-    .item-name {
-      flex: 1;
+    .stats-total-hero {
+      text-align: center;
+      padding: 10px 0 20px;
+    }
+
+    .stats-total-hero .amount {
+      font-size: 32px;
+      font-weight: 700;
+      color: #5a4a42;
+    }
+
+    .stats-total-hero .label {
+      font-size: 12px;
+      color: #9d8b80;
+      margin-top: 4px;
+    }
+
+    .query-result-row {
+      padding: 10px;
+      border-bottom: 1px solid #ede4d9;
+      font-size: 13px;
+    }
+
+    .query-result-row:last-child {
+      border-bottom: none;
+    }
+
+    .query-result-top {
+      display: flex;
+      justify-content: space-between;
       color: #3a2a22;
     }
 
-    .item-price {
-      color: #8b7b73;
-      min-width: 50px;
-      text-align: right;
+    .query-result-meta {
+      color: #9d8b80;
+      font-size: 11px;
+      margin-top: 2px;
+    }
+
+    .empty-hint {
+      text-align: center;
+      color: #9d8b80;
+      font-size: 13px;
+      padding: 20px 0;
     }
 
     .error {
@@ -274,6 +361,21 @@
     }
 
     .error.show {
+      display: block;
+    }
+
+    .success {
+      padding: 12px;
+      background: #e8f5e8;
+      border: 1px solid #c9e8c9;
+      border-radius: 6px;
+      color: #2d5a2d;
+      font-size: 13px;
+      margin-bottom: 15px;
+      display: none;
+    }
+
+    .success.show {
       display: block;
     }
 
@@ -292,8 +394,6 @@
       font-weight: 600;
       cursor: pointer;
       transition: all 0.3s;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
     }
 
     .btn-primary {
@@ -319,20 +419,6 @@
     .btn-secondary:hover {
       background: #f5ede6;
       border-color: #9d8b80;
-    }
-
-    .success {
-      padding: 12px;
-      background: #e8f5e8;
-      border: 1px solid #c9e8c9;
-      border-radius: 6px;
-      color: #2d5a2d;
-      font-size: 13px;
-      display: none;
-    }
-
-    .success.show {
-      display: block;
     }
 
     @media (max-width: 600px) {
@@ -363,51 +449,78 @@
       .btn {
         width: 100%;
       }
+
+      .form-row {
+        flex-direction: column;
+        gap: 0;
+      }
     }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>📝 收據掃描器</h1>
-      <p>拍照或上傳收據，自動提取品項</p>
+      <button class="back-btn" id="backBtn" style="display:none;" onclick="showHome()">← 返回</button>
+      <h1 id="pageTitle">📝 收據掃描器</h1>
+      <p id="pageSubtitle">拍照上傳，自動翻譯、分類、統計</p>
     </div>
 
-    <div class="card">
-      <div class="upload-zone" id="uploadZone">
-        <div class="upload-icon">📷</div>
-        <div class="upload-text">選擇收據照片</div>
-        <div class="upload-hint" style="margin-bottom: 15px;">支援 JPG, PNG</div>
-        <div class="upload-btn-group">
-          <button type="button" class="btn btn-secondary" onclick="document.getElementById('cameraInput').click()">📷 拍照</button>
-          <button type="button" class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">🖼️ 相簿</button>
-        </div>
-        <input type="file" id="fileInput" accept="image/*" style="display:none;">
-        <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none;">
+    <!-- HOME SCREEN -->
+    <div class="screen active" id="homeScreen">
+      <div class="nav-btn-group">
+        <button class="nav-btn" onclick="showScan()">
+          <span class="icon">📷</span>
+          <span>掃描收據</span>
+        </button>
+        <button class="nav-btn" onclick="showQuery()">
+          <span class="icon">🔍</span>
+          <span>查詢紀錄</span>
+        </button>
       </div>
 
-      <div class="preview-img" id="preview" style="display: none;"></div>
-
-      <div class="loading" id="loading">
-        <span class="spinner"></span>掃描中...
-      </div>
-
-      <div class="error" id="error"></div>
-      <div class="success" id="success"></div>
-    </div>
-
-    <div class="form-section" id="formSection">
       <div class="card">
+        <div class="stats-total-hero">
+          <div class="amount" id="homeTotalAmount">¥0</div>
+          <div class="label" id="homeTotalLabel">累計花費</div>
+        </div>
+        <div id="homeStatsBreakdown"></div>
+        <div class="empty-hint" id="homeEmptyHint" style="display:none;">還沒有任何紀錄，掃描第一張收據吧！</div>
+      </div>
+    </div>
+
+    <!-- SCAN SCREEN -->
+    <div class="screen" id="scanScreen">
+      <div class="card">
+        <div class="upload-zone" id="uploadZone">
+          <div class="upload-icon">📷</div>
+          <div class="upload-text">選擇收據照片</div>
+          <div class="upload-hint">支援 JPG, PNG</div>
+          <div class="upload-btn-group">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('cameraInput').click()">📷 拍照</button>
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">🖼️ 相簿</button>
+          </div>
+          <input type="file" id="fileInput" accept="image/*" style="display:none;">
+          <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none;">
+        </div>
+
+        <div class="preview-img" id="preview" style="display: none;"></div>
+        <div class="loading" id="loading"><span class="spinner"></span>掃描中...</div>
+        <div class="error" id="error"></div>
+        <div class="success" id="success"></div>
+      </div>
+
+      <div class="card" id="formSection" style="display:none;">
         <h3 style="margin-bottom: 15px; font-size: 16px; color: #5a4a42;">確認資料</h3>
 
-        <div class="form-group">
-          <label>日期</label>
-          <input type="date" id="date" required>
-        </div>
-
-        <div class="form-group">
-          <label>店鋪</label>
-          <input type="text" id="store" placeholder="APPRO">
+        <div class="form-row">
+          <div class="form-group">
+            <label>日期</label>
+            <input type="date" id="date" required>
+          </div>
+          <div class="form-group">
+            <label>店鋪</label>
+            <input type="text" id="store" placeholder="APPRO">
+          </div>
         </div>
 
         <div class="form-group">
@@ -421,40 +534,51 @@
         </div>
 
         <div class="button-group">
-          <button class="btn btn-secondary" onclick="resetForm()">重新掃描</button>
+          <button class="btn btn-secondary" onclick="resetScan()">重新掃描</button>
           <button class="btn btn-primary" id="saveBtn" onclick="saveToNotion()">儲存到 Notion</button>
         </div>
       </div>
     </div>
 
-    <div class="form-section" id="statsSection">
+    <!-- QUERY SCREEN -->
+    <div class="screen" id="queryScreen">
       <div class="card">
-        <h3 style="margin-bottom: 15px; font-size: 16px; color: #5a4a42;">📊 累計花費佔比</h3>
-        <div id="statsTotal" style="font-size: 13px; color: #8b7b73; margin-bottom: 12px;"></div>
-        <div id="statsBreakdown"></div>
-        <div class="button-group">
-          <button class="btn btn-primary" onclick="resetForm()">掃描下一張收據</button>
+        <div class="form-row">
+          <div class="form-group">
+            <label>開始日期</label>
+            <input type="date" id="queryStart">
+          </div>
+          <div class="form-group">
+            <label>結束日期</label>
+            <input type="date" id="queryEnd">
+          </div>
         </div>
+
+        <div class="form-group">
+          <label>主分類</label>
+          <select id="queryCategory">
+            <option value="">全部</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>關鍵字（品項名稱）</label>
+          <input type="text" id="queryKeyword" placeholder="例如：雞蛋">
+        </div>
+
+        <button class="btn btn-primary" style="width:100%;" onclick="runQuery()">搜尋</button>
       </div>
+
+      <div class="card" id="queryResultCard" style="display:none;">
+        <div id="queryResultSummary" style="font-size: 13px; color: #8b7b73; margin-bottom: 10px;"></div>
+        <div id="queryResultList"></div>
+      </div>
+
+      <div class="error" id="queryError"></div>
     </div>
   </div>
 
   <script>
-    const uploadZone = document.getElementById('uploadZone');
-    const fileInput = document.getElementById('fileInput');
-    const preview = document.getElementById('preview');
-    const loading = document.getElementById('loading');
-    const error = document.getElementById('error');
-    const success = document.getElementById('success');
-    const formSection = document.getElementById('formSection');
-    const dateInput = document.getElementById('date');
-    const itemsList = document.getElementById('itemsList');
-
-    // 設定今天的日期
-    dateInput.valueAsDate = new Date();
-
-    let parsedItems = [];
-
     const CATEGORY_MAP = {
       '生鮮食材': ['肉類', '海鮮', '蔬菜', '水果'],
       '蛋奶製品': ['雞蛋', '牛奶', '起司', '優格'],
@@ -467,10 +591,93 @@
     };
     const MAIN_CATEGORIES = Object.keys(CATEGORY_MAP);
 
+    // ---------- Screen navigation ----------
+    const pageTitle = document.getElementById('pageTitle');
+    const pageSubtitle = document.getElementById('pageSubtitle');
+    const backBtn = document.getElementById('backBtn');
+
+    function switchScreen(id, title, subtitle, showBack) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      pageTitle.textContent = title;
+      pageSubtitle.textContent = subtitle;
+      backBtn.style.display = showBack ? 'block' : 'none';
+    }
+
+    function showHome() {
+      switchScreen('homeScreen', '📝 收據掃描器', '拍照上傳，自動翻譯、分類、統計', false);
+      loadStats();
+    }
+
+    function showScan() {
+      switchScreen('scanScreen', '📷 掃描收據', '拍照或上傳收據照片', true);
+    }
+
+    function showQuery() {
+      switchScreen('queryScreen', '🔍 查詢紀錄', '依日期、分類或關鍵字搜尋', true);
+    }
+
+    // ---------- Home / Stats ----------
+    async function loadStats() {
+      try {
+        const response = await fetch('/api/stats');
+        if (!response.ok) throw new Error('統計讀取失敗');
+        const data = await response.json();
+
+        const homeEmptyHint = document.getElementById('homeEmptyHint');
+        const breakdown = document.getElementById('homeStatsBreakdown');
+
+        if (data.recordCount === 0) {
+          document.getElementById('homeTotalAmount').textContent = '¥0';
+          document.getElementById('homeTotalLabel').textContent = '尚無紀錄';
+          breakdown.innerHTML = '';
+          homeEmptyHint.style.display = 'block';
+          return;
+        }
+
+        homeEmptyHint.style.display = 'none';
+        document.getElementById('homeTotalAmount').textContent = `¥${data.grandTotal.toLocaleString()}`;
+        document.getElementById('homeTotalLabel').textContent = `累計花費（共 ${data.recordCount} 筆）`;
+
+        breakdown.innerHTML = '';
+        data.categoryBreakdown.forEach(cat => {
+          const row = document.createElement('div');
+          row.className = 'stat-bar-row';
+          row.innerHTML = `
+            <div class="stat-bar-label">
+              <span>${cat.name}</span>
+              <span>¥${cat.total.toLocaleString()}（${cat.percentage}%）</span>
+            </div>
+            <div class="stat-bar-track">
+              <div class="stat-bar-fill" style="width: ${cat.percentage}%;"></div>
+            </div>
+          `;
+          breakdown.appendChild(row);
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // ---------- Scan flow ----------
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const cameraInput = document.getElementById('cameraInput');
+    const preview = document.getElementById('preview');
+    const loading = document.getElementById('loading');
+    const error = document.getElementById('error');
+    const success = document.getElementById('success');
+    const formSection = document.getElementById('formSection');
+    const dateInput = document.getElementById('date');
+    const itemsList = document.getElementById('itemsList');
+
+    dateInput.valueAsDate = new Date();
+
+    let parsedItems = [];
+
     function renderItems() {
       itemsList.innerHTML = '';
       parsedItems.forEach((item, idx) => {
-        // Guard against category/subCategory not in our map
         if (!CATEGORY_MAP[item.category]) item.category = '其他';
         if (!CATEGORY_MAP[item.category].includes(item.subCategory)) {
           item.subCategory = CATEGORY_MAP[item.category][0];
@@ -513,27 +720,8 @@
       });
     }
 
-    const cameraInput = document.getElementById('cameraInput');
-
     cameraInput.addEventListener('change', (e) => {
       if (e.target.files.length > 0) handleFile(e.target.files[0]);
-    });
-
-    // 拖放
-    uploadZone.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      uploadZone.classList.add('dragging');
-    });
-
-    uploadZone.addEventListener('dragleave', () => {
-      uploadZone.classList.remove('dragging');
-    });
-
-    uploadZone.addEventListener('drop', (e) => {
-      e.preventDefault();
-      uploadZone.classList.remove('dragging');
-      const files = e.dataTransfer.files;
-      if (files.length > 0) handleFile(files[0]);
     });
 
     fileInput.addEventListener('change', (e) => {
@@ -553,7 +741,7 @@
         preview.style.display = 'block';
         uploadZone.style.display = 'none';
 
-        loading.style.display = 'block';
+        loading.classList.add('show');
         error.classList.remove('show');
         success.classList.remove('show');
 
@@ -570,10 +758,10 @@
           parsedItems = data.items || [];
           renderItems();
 
-          loading.style.display = 'none';
+          loading.classList.remove('show');
           formSection.style.display = 'block';
         } catch (err) {
-          loading.style.display = 'none';
+          loading.classList.remove('show');
           showError(err.message);
           uploadZone.style.display = 'block';
           preview.style.display = 'none';
@@ -582,11 +770,10 @@
       reader.readAsDataURL(file);
     }
 
-    function resetForm() {
+    function resetScan() {
       uploadZone.style.display = 'block';
       preview.style.display = 'none';
       formSection.style.display = 'none';
-      document.getElementById('statsSection').style.display = 'none';
       fileInput.value = '';
       cameraInput.value = '';
       parsedItems = [];
@@ -615,46 +802,13 @@
 
         if (!response.ok) throw new Error('儲存失敗');
 
-        showSuccess('已儲存到 Notion！正在計算統計...');
-        formSection.style.display = 'none';
-        await loadStats();
+        showSuccess('已儲存到 Notion！');
+        resetScan();
+        showHome();
       } catch (err) {
         showError('儲存失敗: ' + err.message);
       } finally {
         saveBtn.disabled = false;
-      }
-    }
-
-    async function loadStats() {
-      try {
-        const response = await fetch('/api/stats');
-        if (!response.ok) throw new Error('統計讀取失敗');
-        const data = await response.json();
-
-        document.getElementById('statsTotal').textContent =
-          `共 ${data.recordCount} 筆紀錄，累計 ¥${data.grandTotal.toLocaleString()}`;
-
-        const breakdown = document.getElementById('statsBreakdown');
-        breakdown.innerHTML = '';
-
-        data.categoryBreakdown.forEach(cat => {
-          const row = document.createElement('div');
-          row.className = 'stat-bar-row';
-          row.innerHTML = `
-            <div class="stat-bar-label">
-              <span>${cat.name}</span>
-              <span>¥${cat.total.toLocaleString()}（${cat.percentage}%）</span>
-            </div>
-            <div class="stat-bar-track">
-              <div class="stat-bar-fill" style="width: ${cat.percentage}%;"></div>
-            </div>
-          `;
-          breakdown.appendChild(row);
-        });
-
-        document.getElementById('statsSection').style.display = 'block';
-      } catch (err) {
-        showError('統計讀取失敗: ' + err.message);
       }
     }
 
@@ -667,6 +821,70 @@
       success.textContent = msg;
       success.classList.add('show');
     }
+
+    // ---------- Query ----------
+    const queryCategorySelect = document.getElementById('queryCategory');
+    MAIN_CATEGORIES.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c;
+      opt.textContent = c;
+      queryCategorySelect.appendChild(opt);
+    });
+
+    async function runQuery() {
+      const queryError = document.getElementById('queryError');
+      queryError.classList.remove('show');
+
+      const payload = {
+        startDate: document.getElementById('queryStart').value || undefined,
+        endDate: document.getElementById('queryEnd').value || undefined,
+        category: document.getElementById('queryCategory').value || undefined,
+        keyword: document.getElementById('queryKeyword').value || undefined
+      };
+
+      try {
+        const response = await fetch('/api/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) throw new Error('查詢失敗');
+        const data = await response.json();
+
+        const resultCard = document.getElementById('queryResultCard');
+        const summary = document.getElementById('queryResultSummary');
+        const list = document.getElementById('queryResultList');
+
+        resultCard.style.display = 'block';
+        summary.textContent = `共 ${data.count} 筆，總金額 ¥${data.total.toLocaleString()}`;
+        list.innerHTML = '';
+
+        if (data.records.length === 0) {
+          list.innerHTML = '<div class="empty-hint">沒有符合條件的紀錄</div>';
+          return;
+        }
+
+        data.records.forEach(r => {
+          const row = document.createElement('div');
+          row.className = 'query-result-row';
+          row.innerHTML = `
+            <div class="query-result-top">
+              <span>${r.name}</span>
+              <span>¥${r.amount.toLocaleString()}</span>
+            </div>
+            <div class="query-result-meta">${r.date} · ${r.store} · ${r.category}${r.subCategory ? ' / ' + r.subCategory : ''}</div>
+          `;
+          list.appendChild(row);
+        });
+      } catch (err) {
+        queryError.textContent = err.message;
+        queryError.classList.add('show');
+      }
+    }
+
+    // ---------- Init ----------
+    loadStats();
   </script>
 </body>
 </html>
