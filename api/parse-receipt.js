@@ -21,7 +21,7 @@ export default async function handler(req, res) {
 
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
+      max_tokens: 4096,
       messages: [
         {
           role: 'user',
@@ -76,6 +76,9 @@ export default async function handler(req, res) {
     return res.status(200).json(parsed);
   } catch (error) {
     console.error('Parse error:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({
+      error: error.message,
+      detail: error.name === 'SyntaxError' ? 'JSON 解析失敗，可能是回應被截斷' : undefined
+    });
   }
 }
