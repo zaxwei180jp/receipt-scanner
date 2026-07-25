@@ -101,6 +101,112 @@ export default async function handler(req, res) {
       .sort((a, b) => b.count - a.count || b.total - a.total)
       .slice(0, 20);
 
+    // ---------- Extra analysis: MoM change, average, projection, insights ----------
+    const categoryLabels = {
+      meat: { label: '肉類', data: meatByMonth },
+      veg: { label: '蔬菜', data: vegByMonth },
+      health: { label: '健康飲品', data: healthDrinkByMonth },
+      snack: { label: '零食', data: snackByMonth },
+      daily: { label: '日用品', data: dailyByMonth }
+    };
+
+    const pctChange = (curr, prev) => {
+      if (prev === 0) return curr > 0 ? 100 : 0;
+      return Math.round(((curr - prev) / prev) * 1000) / 10;
+    };
+
+    const lastMonth = months[months.length - 1];
+    const prevMonth = months.length >= 2 ? months[months.length - 2] : null;
+
+    const momChange = {};
+    if (lastMonth && prevMonth) {
+      momChange.total = pctChange(monthlyTotal[lastMonth], monthlyTotal[prevMonth]);
+      Object.entries(categoryLabels).forEach(([key, c]) => {
+        momChange[key] = pctChange(c.data[lastMonth] || 0, c.data[prevMonth] || 0);
+      });
+    }
+
+    const monthTotals = months.map(m => monthlyTotal[m]);
+    const avgMonthly = monthTotals.length > 0
+      ? Math.round(monthTotals.reduce((a, b) => a + b, 0) / monthTotals.length)
+      : 0;
+
+    // Projection for the most recent month if it matches the real current month
+    const now = new Date();
+    const currentMonthStr = now.toISOString().slice(0, 7);
+    let projection = null;
+
+    if (lastMonth === currentMonthStr) {
+      const daysElapsed = now.getUTCDate();
+      const daysInMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0)).getUTCDate();
+      if (daysElapsed > 0) {
+        const projected = Math.round((monthlyTotal[lastMonth] / daysElapsed) * daysInMonth);
+        projection = {
+          month: lastMonth,
+          daysElapsed,
+          daysInMonth,
+          spentSoFar: monthlyTotal[lastMonth],
+          projectedTotal: projected
+        };
+      }
+    }
+
+    // ---------- Generate text insights ----------
+    const insights = [];
+
+    if (lastMonth && prevMonth) {
+      const dir = momChange.total > 0 ? '增加' : momChange.total < 0 ? '減少' : '持平';
+      if (momChange.total !== 0) {
+        insights.push(`${lastMonth} 總支出比 ${prevMonth} ${dir} ${Math.abs(momChange.total)}%（¥${monthlyTotal[prevMonth].toLocaleString()} → ¥${monthlyTotal[lastMonth].toLocaleString()}）`);
+      }
+
+      // Find category with biggest increase
+      const catChanges = Object.entries(categoryLabels).map(([key, c]) => ({
+        label: c.label,
+        change: momChange[key],
+        currAmount: c.data[lastMonth] || 0
+      })).filter(c => c.currAmount > 0 || (categoryLabels[Object.keys(categoryLabels).find(k => categoryLabels[k].label === c.label)].data[prevMonth] || 0) > 0);
+
+      const biggestIncrease = catChanges.filter(c => c.change > 0).sort((a, b) => b.change - a.change)[0];
+      const biggestDecrease = catChanges.filter(c => c.change < 0).sort((a, b) => a.change - b.change)[0];
+
+      if (biggestIncrease && biggestIncrease.change >= 20) {
+        insights.push(`${biggestIncrease.label} 支出漲幅最大，比上月多花 ${biggestIncrease.change}%`);
+      }
+      if (biggestDecrease && biggestDecrease.change <= -20) {
+        insights.push(`${biggestDecrease.label} 支出明顯下降，比上月少花 ${Math.abs(biggestDecrease.change)}%`);
+      }
+    }
+
+    if (projection && avgMonthly > 0) {
+      const vsAvg = pctChange(projection.projectedTotal, avgMonthly);
+      if (Math.abs(vsAvg) >= 15) {
+        insights.push(`本月（${projection.month}）已過 ${projection.daysElapsed}/${projection.daysInMonth} 天，照目前花費速度預估月底會花 ¥${projection.projectedTotal.toLocaleString()}，比過去平均${vsAvg > 0 ? '高' : '低'} ${Math.abs(vsAvg)}%`);
+      } else {
+        insights.push(`本月（${projection.month}）目前花費速度接近過去平均，預估月底約 ¥${projection.projectedTotal.toLocaleString()}`);
+      }
+    }
+
+    if (topItems.length > 0) {
+      const top = topItems[0];
+      insights.push(`「${top.name}」是你買最多次的商品，累積買了 ${top.count} 次，共花 ¥${top.total.toLocaleString()}`);
+    }
+
+    if (months.length >= 3) {
+      const last3 = months.slice(-3).map(m => monthlyTotal[m]);
+      const isRising = last3[0] < last3[1] && last3[1] < last3[2];
+      const isFalling = last3[0] > last3[1] && last3[1] > last3[2];
+      if (isRising) {
+        insights.push(`最近 3 個月總支出連續上升（${months.slice(-3).join(' → ')}），建議檢視是否有非必要消費增加`);
+      } else if (isFalling) {
+        insights.push(`最近 3 個月總支出連續下降，控管得不錯，繼續保持`);
+      }
+    }
+
+    if (insights.length === 0) {
+      insights.push('資料還不夠多，多累積幾個月的紀錄後分析會更準確');
+    }
+
     return res.status(200).json({
       months,
       monthlyTotal,
@@ -110,7 +216,11 @@ export default async function handler(req, res) {
       snackByMonth,
       dailyByMonth,
       topItems,
-      recordCount: records.length
+      recordCount: records.length,
+      momChange,
+      avgMonthly,
+      projection,
+      insights
     });
   } catch (error) {
     console.error('Monthly analysis error:', error);
