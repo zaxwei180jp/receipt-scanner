@@ -59,12 +59,19 @@ export default async function handler(req, res) {
 
     const months = [...new Set(records.map(r => monthOf(r.date)))].sort();
 
+    const MAIN_CATEGORIES = ['生鮮食材', '蛋奶製品', '健康飲品', '加工食品', '調味料', '麵包甜點', '日用品', '其他'];
+
     const monthlyTotal = {};
     const meatByMonth = {};
     const vegByMonth = {};
     const healthDrinkByMonth = {};
     const snackByMonth = {};
     const dailyByMonth = {};
+    const mainCategoryByMonth = {}; // { category: { month: total } }
+
+    MAIN_CATEGORIES.forEach(cat => {
+      mainCategoryByMonth[cat] = {};
+    });
 
     months.forEach(m => {
       monthlyTotal[m] = 0;
@@ -73,6 +80,9 @@ export default async function handler(req, res) {
       healthDrinkByMonth[m] = 0;
       snackByMonth[m] = 0;
       dailyByMonth[m] = 0;
+      MAIN_CATEGORIES.forEach(cat => {
+        mainCategoryByMonth[cat][m] = 0;
+      });
     });
 
     const itemAgg = {}; // name -> { count, total }
@@ -85,6 +95,13 @@ export default async function handler(req, res) {
       if (r.subCategory === '蔬菜') vegByMonth[m] += r.amount;
       if (r.subCategory === '零食') snackByMonth[m] += r.amount;
       if (r.category === '日用品') dailyByMonth[m] += r.amount;
+
+      if (mainCategoryByMonth[r.category]) {
+        mainCategoryByMonth[r.category][m] += r.amount;
+      } else if (r.category) {
+        // Category not in the known list (e.g. old data) — bucket into 其他
+        mainCategoryByMonth['其他'][m] += r.amount;
+      }
 
       const searchText = `${r.name} ${r.notes}`;
       if (/R-1|LG21/i.test(searchText)) {
@@ -102,14 +119,6 @@ export default async function handler(req, res) {
       .slice(0, 20);
 
     // ---------- Extra analysis: MoM change, average, projection, insights ----------
-    const categoryLabels = {
-      meat: { label: '肉類', data: meatByMonth },
-      veg: { label: '蔬菜', data: vegByMonth },
-      health: { label: '健康飲品', data: healthDrinkByMonth },
-      snack: { label: '零食', data: snackByMonth },
-      daily: { label: '日用品', data: dailyByMonth }
-    };
-
     const pctChange = (curr, prev) => {
       if (prev === 0) return curr > 0 ? 100 : 0;
       return Math.round(((curr - prev) / prev) * 1000) / 10;
@@ -119,10 +128,14 @@ export default async function handler(req, res) {
     const prevMonth = months.length >= 2 ? months[months.length - 2] : null;
 
     const momChange = {};
+    const momChangeByCategory = {};
     if (lastMonth && prevMonth) {
       momChange.total = pctChange(monthlyTotal[lastMonth], monthlyTotal[prevMonth]);
-      Object.entries(categoryLabels).forEach(([key, c]) => {
-        momChange[key] = pctChange(c.data[lastMonth] || 0, c.data[prevMonth] || 0);
+      MAIN_CATEGORIES.forEach(cat => {
+        momChangeByCategory[cat] = pctChange(
+          mainCategoryByMonth[cat][lastMonth] || 0,
+          mainCategoryByMonth[cat][prevMonth] || 0
+        );
       });
     }
 
@@ -160,12 +173,13 @@ export default async function handler(req, res) {
         insights.push(`${lastMonth} 總支出比 ${prevMonth} ${dir} ${Math.abs(momChange.total)}%（¥${monthlyTotal[prevMonth].toLocaleString()} → ¥${monthlyTotal[lastMonth].toLocaleString()}）`);
       }
 
-      // Find category with biggest increase
-      const catChanges = Object.entries(categoryLabels).map(([key, c]) => ({
-        label: c.label,
-        change: momChange[key],
-        currAmount: c.data[lastMonth] || 0
-      })).filter(c => c.currAmount > 0 || (categoryLabels[Object.keys(categoryLabels).find(k => categoryLabels[k].label === c.label)].data[prevMonth] || 0) > 0);
+      // Find category with biggest increase/decrease among all main categories
+      const catChanges = MAIN_CATEGORIES.map(cat => ({
+        label: cat,
+        change: momChangeByCategory[cat],
+        currAmount: mainCategoryByMonth[cat][lastMonth] || 0,
+        prevAmount: mainCategoryByMonth[cat][prevMonth] || 0
+      })).filter(c => c.currAmount > 0 || c.prevAmount > 0);
 
       const biggestIncrease = catChanges.filter(c => c.change > 0).sort((a, b) => b.change - a.change)[0];
       const biggestDecrease = catChanges.filter(c => c.change < 0).sort((a, b) => a.change - b.change)[0];
@@ -210,6 +224,8 @@ export default async function handler(req, res) {
     return res.status(200).json({
       months,
       monthlyTotal,
+      mainCategories: MAIN_CATEGORIES,
+      mainCategoryByMonth,
       meatByMonth,
       vegByMonth,
       healthDrinkByMonth,
@@ -218,6 +234,7 @@ export default async function handler(req, res) {
       topItems,
       recordCount: records.length,
       momChange,
+      momChangeByCategory,
       avgMonthly,
       projection,
       insights
