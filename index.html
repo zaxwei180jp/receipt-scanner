@@ -386,6 +386,65 @@
       font-weight: 700;
     }
 
+    .insight-item {
+      display: flex;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid #ede4d9;
+      font-size: 14px;
+      color: #5a4a42;
+      line-height: 1.5;
+    }
+
+    .insight-item:last-child {
+      border-bottom: none;
+    }
+
+    .insight-bullet {
+      flex-shrink: 0;
+      color: #9d8b80;
+    }
+
+    .summary-stat {
+      flex: 1;
+    }
+
+    .summary-stat .value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #5a4a42;
+    }
+
+    .summary-stat .label {
+      font-size: 11px;
+      color: #9d8b80;
+      margin-top: 4px;
+    }
+
+    .mom-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin: 2px 4px 2px 0;
+    }
+
+    .mom-badge.up {
+      background: #fde8e8;
+      color: #8b4444;
+    }
+
+    .mom-badge.down {
+      background: #e8f5e8;
+      color: #2d5a2d;
+    }
+
+    .mom-badge.flat {
+      background: #ede4d9;
+      color: #8b7b73;
+    }
+
     .top-item-row {
       display: flex;
       justify-content: space-between;
@@ -674,6 +733,15 @@
 
     <!-- ANALYSIS SCREEN -->
     <div class="screen" id="analysisScreen">
+      <div class="card" id="insightsCard">
+        <h3 style="margin-bottom: 12px; font-size: 15px; color: #5a4a42;">💡 分析與建議</h3>
+        <div id="insightsList"></div>
+      </div>
+
+      <div class="card" id="summaryCard" style="display:none;">
+        <div id="summaryRow" style="display:flex; gap: 16px; text-align:center;"></div>
+      </div>
+
       <div class="card">
         <h3 style="margin-bottom: 12px; font-size: 15px; color: #5a4a42;">📈 每月支出趨勢</h3>
         <div id="monthlyTrendChart"></div>
@@ -681,6 +749,7 @@
 
       <div class="card">
         <h3 style="margin-bottom: 12px; font-size: 15px; color: #5a4a42;">🍖 分類每月花費</h3>
+        <div id="categoryMomBadges" style="margin-bottom: 10px;"></div>
         <div style="overflow-x: auto;">
           <table id="categoryMonthTable" style="width: 100%; border-collapse: collapse; font-size: 12px;"></table>
         </div>
@@ -1138,11 +1207,50 @@
         const data = await response.json();
 
         if (data.months.length === 0) {
+          document.getElementById('insightsList').innerHTML = '<div class="empty-hint">還沒有任何紀錄</div>';
+          document.getElementById('summaryCard').style.display = 'none';
           document.getElementById('monthlyTrendChart').innerHTML = '<div class="empty-hint">還沒有任何紀錄</div>';
           document.getElementById('categoryMonthTable').innerHTML = '';
           document.getElementById('topItemsList').innerHTML = '';
           return;
         }
+
+        // Insights
+        const insightsList = document.getElementById('insightsList');
+        insightsList.innerHTML = data.insights.map(text => `
+          <div class="insight-item"><span class="insight-bullet">●</span><span>${text}</span></div>
+        `).join('');
+
+        // Summary hero (avg monthly + projection if available)
+        const summaryCard = document.getElementById('summaryCard');
+        const summaryRow = document.getElementById('summaryRow');
+        let summaryHtml = `
+          <div class="summary-stat">
+            <div class="value">¥${data.avgMonthly.toLocaleString()}</div>
+            <div class="label">月均支出</div>
+          </div>
+        `;
+        if (data.projection) {
+          summaryHtml += `
+            <div class="summary-stat">
+              <div class="value">¥${data.projection.projectedTotal.toLocaleString()}</div>
+              <div class="label">本月預估（第${data.projection.daysElapsed}/${data.projection.daysInMonth}天）</div>
+            </div>
+          `;
+        }
+        if (data.momChange && data.momChange.total !== undefined) {
+          const mc = data.momChange.total;
+          const arrow = mc > 0 ? '▲' : mc < 0 ? '▼' : '—';
+          const cls = mc > 0 ? 'up' : mc < 0 ? 'down' : 'flat';
+          summaryHtml += `
+            <div class="summary-stat">
+              <div class="value" style="font-size:16px;"><span class="mom-badge ${cls}">${arrow} ${Math.abs(mc)}%</span></div>
+              <div class="label">較上月</div>
+            </div>
+          `;
+        }
+        summaryRow.innerHTML = summaryHtml;
+        summaryCard.style.display = 'block';
 
         // Trend chart
         const maxTotal = Math.max(...Object.values(data.monthlyTotal));
@@ -1158,6 +1266,21 @@
             </div>
           `;
         }).join('');
+
+        // MoM badges for tracked categories
+        const badgeContainer = document.getElementById('categoryMomBadges');
+        if (data.momChange) {
+          const keyLabels = { meat: '肉類', veg: '蔬菜', health: '健康飲品', snack: '零食', daily: '日用品' };
+          badgeContainer.innerHTML = Object.entries(keyLabels).map(([key, label]) => {
+            const mc = data.momChange[key];
+            if (mc === undefined) return '';
+            const arrow = mc > 0 ? '▲' : mc < 0 ? '▼' : '—';
+            const cls = mc > 0 ? 'up' : mc < 0 ? 'down' : 'flat';
+            return `<span class="mom-badge ${cls}">${label} ${arrow}${Math.abs(mc)}%</span>`;
+          }).join('');
+        } else {
+          badgeContainer.innerHTML = '';
+        }
 
         // Category table
         const table = document.getElementById('categoryMonthTable');
