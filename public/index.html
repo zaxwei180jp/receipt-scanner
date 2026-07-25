@@ -1267,35 +1267,27 @@
           `;
         }).join('');
 
-        // MoM badges for tracked categories
+        // MoM badges for all main categories
         const badgeContainer = document.getElementById('categoryMomBadges');
-        if (data.momChange) {
-          const keyLabels = { meat: '肉類', veg: '蔬菜', health: '健康飲品', snack: '零食', daily: '日用品' };
-          badgeContainer.innerHTML = Object.entries(keyLabels).map(([key, label]) => {
-            const mc = data.momChange[key];
+        if (data.momChangeByCategory) {
+          badgeContainer.innerHTML = data.mainCategories.map(cat => {
+            const mc = data.momChangeByCategory[cat];
             if (mc === undefined) return '';
             const arrow = mc > 0 ? '▲' : mc < 0 ? '▼' : '—';
             const cls = mc > 0 ? 'up' : mc < 0 ? 'down' : 'flat';
-            return `<span class="mom-badge ${cls}">${label} ${arrow}${Math.abs(mc)}%</span>`;
+            return `<span class="mom-badge ${cls}">${cat} ${arrow}${Math.abs(mc)}%</span>`;
           }).join('');
         } else {
           badgeContainer.innerHTML = '';
         }
 
-        // Category table
+        // Category table — matches all 8 main categories from CATEGORY_MAP
         const table = document.getElementById('categoryMonthTable');
-        const rows = [
-          { label: '肉類', data: data.meatByMonth },
-          { label: '蔬菜', data: data.vegByMonth },
-          { label: '健康飲品(R-1/LG21)', data: data.healthDrinkByMonth },
-          { label: '零食', data: data.snackByMonth },
-          { label: '日用品', data: data.dailyByMonth }
-        ];
-
         let html = '<tr><th>分類</th>' + data.months.map(m => `<th>${m}</th>`).join('') + '</tr>';
-        rows.forEach(r => {
-          html += `<tr><td>${r.label}</td>` +
-            data.months.map(m => `<td>¥${(r.data[m] || 0).toLocaleString()}</td>`).join('') +
+        data.mainCategories.forEach(cat => {
+          const catData = data.mainCategoryByMonth[cat] || {};
+          html += `<tr><td>${cat}</td>` +
+            data.months.map(m => `<td>¥${(catData[m] || 0).toLocaleString()}</td>`).join('') +
             '</tr>';
         });
         table.innerHTML = html;
