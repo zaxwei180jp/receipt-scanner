@@ -386,6 +386,65 @@
       font-weight: 700;
     }
 
+    .insight-item {
+      display: flex;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid #ede4d9;
+      font-size: 14px;
+      color: #5a4a42;
+      line-height: 1.5;
+    }
+
+    .insight-item:last-child {
+      border-bottom: none;
+    }
+
+    .insight-bullet {
+      flex-shrink: 0;
+      color: #9d8b80;
+    }
+
+    .summary-stat {
+      flex: 1;
+    }
+
+    .summary-stat .value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #5a4a42;
+    }
+
+    .summary-stat .label {
+      font-size: 11px;
+      color: #9d8b80;
+      margin-top: 4px;
+    }
+
+    .mom-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin: 2px 4px 2px 0;
+    }
+
+    .mom-badge.up {
+      background: #fde8e8;
+      color: #8b4444;
+    }
+
+    .mom-badge.down {
+      background: #e8f5e8;
+      color: #2d5a2d;
+    }
+
+    .mom-badge.flat {
+      background: #ede4d9;
+      color: #8b7b73;
+    }
+
     .top-item-row {
       display: flex;
       justify-content: space-between;
@@ -674,6 +733,15 @@
 
     <!-- ANALYSIS SCREEN -->
     <div class="screen" id="analysisScreen">
+      <div class="card" id="insightsCard">
+        <h3 style="margin-bottom: 12px; font-size: 15px; color: #5a4a42;">💡 分析與建議</h3>
+        <div id="insightsList"></div>
+      </div>
+
+      <div class="card" id="summaryCard" style="display:none;">
+        <div id="summaryRow" style="display:flex; gap: 16px; text-align:center;"></div>
+      </div>
+
       <div class="card">
         <h3 style="margin-bottom: 12px; font-size: 15px; color: #5a4a42;">📈 每月支出趨勢</h3>
         <div id="monthlyTrendChart"></div>
@@ -681,6 +749,7 @@
 
       <div class="card">
         <h3 style="margin-bottom: 12px; font-size: 15px; color: #5a4a42;">🍖 分類每月花費</h3>
+        <div id="categoryMomBadges" style="margin-bottom: 10px;"></div>
         <div style="overflow-x: auto;">
           <table id="categoryMonthTable" style="width: 100%; border-collapse: collapse; font-size: 12px;"></table>
         </div>
@@ -961,30 +1030,96 @@
       const saveBtn = document.getElementById('saveBtn');
       saveBtn.disabled = true;
 
-      const payload = {
-        date: dateInput.value,
-        store: document.getElementById('store').value || 'APPRO',
-        items: parsedItems,
-        notes: document.getElementById('notes').value
-      };
+      const date = dateInput.value;
+      const store = document.getElementById('store').value || 'APPRO';
+      const notes = document.getElementById('notes').value;
+      const total = parsedItems.length;
 
-      try {
-        const response = await fetch('/api/save-notion', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
+      showProgressModal(total);
 
-        if (!response.ok) throw new Error('儲存失敗');
+      let savedCount = 0;
+      let failedItems = [];
 
-        showSuccess('已儲存到 Notion！');
+      for (let i = 0; i < parsedItems.length; i++) {
+        const item = parsedItems[i];
+        updateProgressModal(savedCount, total, item.translated || item.name);
+
+        try {
+          const response = await fetch('/api/save-notion', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ date, store, notes, item })
+          });
+
+          if (!response.ok) throw new Error();
+          savedCount++;
+          updateProgressModal(savedCount, total, item.translated || item.name);
+        } catch (err) {
+          failedItems.push(item.translated || item.name);
+        }
+
+        // small delay to avoid Notion rate limits
+        await new Promise(resolve => setTimeout(resolve, 350));
+      }
+
+      if (failedItems.length > 0) {
+        finishProgressModal(false, `${savedCount}/${total} 已儲存，失敗：${failedItems.join('、')}`);
+      } else {
+        finishProgressModal(true, `已成功儲存 ${savedCount} 個品項！`);
+      }
+
+      setTimeout(() => {
+        hideProgressModal();
         resetScan();
         showHome();
-      } catch (err) {
-        showError('儲存失敗: ' + err.message);
-      } finally {
-        saveBtn.disabled = false;
+      }, 1400);
+
+      saveBtn.disabled = false;
+    }
+
+    // ---------- Progress Modal ----------
+    function showProgressModal(total) {
+      const modal = document.createElement('div');
+      modal.id = 'progressModal';
+      modal.style.cssText = 'position:fixed;inset:0;background:rgba(58,42,34,0.45);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;';
+      modal.innerHTML = `
+        <div style="background:white;border-radius:16px;padding:28px;max-width:340px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,0.2);">
+          <div style="text-align:center;font-size:16px;font-weight:700;color:#5a4a42;margin-bottom:6px;" id="progressTitle">正在上傳到 Notion...</div>
+          <div style="text-align:center;font-size:13px;color:#9d8b80;margin-bottom:18px;" id="progressSubtext">準備中...</div>
+          <div style="background:#ede4d9;border-radius:8px;height:16px;overflow:hidden;margin-bottom:10px;">
+            <div id="progressBarFill" style="background:#9d8b80;height:100%;width:0%;border-radius:8px;transition:width 0.3s;"></div>
+          </div>
+          <div style="text-align:center;font-size:13px;color:#5a4a42;font-weight:600;" id="progressCount">0 / ${total}</div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+
+    function updateProgressModal(count, total, currentName) {
+      const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+      const fill = document.getElementById('progressBarFill');
+      const countEl = document.getElementById('progressCount');
+      const subtext = document.getElementById('progressSubtext');
+      if (fill) fill.style.width = pct + '%';
+      if (countEl) countEl.textContent = `${count} / ${total}`;
+      if (subtext) subtext.textContent = currentName ? `正在儲存：${currentName}` : '準備中...';
+    }
+
+    function finishProgressModal(success, message) {
+      const title = document.getElementById('progressTitle');
+      const subtext = document.getElementById('progressSubtext');
+      const fill = document.getElementById('progressBarFill');
+      if (title) {
+        title.textContent = success ? '✅ 完成！' : '⚠️ 部分失敗';
+        title.style.color = success ? '#2d5a2d' : '#8b4444';
       }
+      if (subtext) subtext.textContent = message;
+      if (fill) fill.style.background = success ? '#7fa87f' : '#c98b8b';
+    }
+
+    function hideProgressModal() {
+      const modal = document.getElementById('progressModal');
+      if (modal) modal.remove();
     }
 
     function showError(msg) {
@@ -1072,11 +1207,50 @@
         const data = await response.json();
 
         if (data.months.length === 0) {
+          document.getElementById('insightsList').innerHTML = '<div class="empty-hint">還沒有任何紀錄</div>';
+          document.getElementById('summaryCard').style.display = 'none';
           document.getElementById('monthlyTrendChart').innerHTML = '<div class="empty-hint">還沒有任何紀錄</div>';
           document.getElementById('categoryMonthTable').innerHTML = '';
           document.getElementById('topItemsList').innerHTML = '';
           return;
         }
+
+        // Insights
+        const insightsList = document.getElementById('insightsList');
+        insightsList.innerHTML = data.insights.map(text => `
+          <div class="insight-item"><span class="insight-bullet">●</span><span>${text}</span></div>
+        `).join('');
+
+        // Summary hero (avg monthly + projection if available)
+        const summaryCard = document.getElementById('summaryCard');
+        const summaryRow = document.getElementById('summaryRow');
+        let summaryHtml = `
+          <div class="summary-stat">
+            <div class="value">¥${data.avgMonthly.toLocaleString()}</div>
+            <div class="label">月均支出</div>
+          </div>
+        `;
+        if (data.projection) {
+          summaryHtml += `
+            <div class="summary-stat">
+              <div class="value">¥${data.projection.projectedTotal.toLocaleString()}</div>
+              <div class="label">本月預估（第${data.projection.daysElapsed}/${data.projection.daysInMonth}天）</div>
+            </div>
+          `;
+        }
+        if (data.momChange && data.momChange.total !== undefined) {
+          const mc = data.momChange.total;
+          const arrow = mc > 0 ? '▲' : mc < 0 ? '▼' : '—';
+          const cls = mc > 0 ? 'up' : mc < 0 ? 'down' : 'flat';
+          summaryHtml += `
+            <div class="summary-stat">
+              <div class="value" style="font-size:16px;"><span class="mom-badge ${cls}">${arrow} ${Math.abs(mc)}%</span></div>
+              <div class="label">較上月</div>
+            </div>
+          `;
+        }
+        summaryRow.innerHTML = summaryHtml;
+        summaryCard.style.display = 'block';
 
         // Trend chart
         const maxTotal = Math.max(...Object.values(data.monthlyTotal));
@@ -1092,6 +1266,21 @@
             </div>
           `;
         }).join('');
+
+        // MoM badges for tracked categories
+        const badgeContainer = document.getElementById('categoryMomBadges');
+        if (data.momChange) {
+          const keyLabels = { meat: '肉類', veg: '蔬菜', health: '健康飲品', snack: '零食', daily: '日用品' };
+          badgeContainer.innerHTML = Object.entries(keyLabels).map(([key, label]) => {
+            const mc = data.momChange[key];
+            if (mc === undefined) return '';
+            const arrow = mc > 0 ? '▲' : mc < 0 ? '▼' : '—';
+            const cls = mc > 0 ? 'up' : mc < 0 ? 'down' : 'flat';
+            return `<span class="mom-badge ${cls}">${label} ${arrow}${Math.abs(mc)}%</span>`;
+          }).join('');
+        } else {
+          badgeContainer.innerHTML = '';
+        }
 
         // Category table
         const table = document.getElementById('categoryMonthTable');
