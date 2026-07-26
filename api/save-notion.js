@@ -44,7 +44,7 @@ export default async function handler(req, res) {
     }
 
     const noteParts = [];
-    if (item.original && item.original !== item.translated) {
+    if (item.original) {
       noteParts.push(`原文: ${item.original}`);
     }
     if (notes) {
