@@ -85,12 +85,7 @@ export default async function handler(req, res) {
       });
     });
 
-    const extractOriginal = (notes) => {
-      const match = notes && notes.match(/原文:\s*([^|]+)/);
-      return match ? match[1].trim() : null;
-    };
-
-    const itemAgg = {}; // canonicalKey -> { count, total, nameCounts: { translatedName: count } }
+    const itemAgg = {}; // translatedName -> { count, total }
 
     for (const r of records) {
       const m = monthOf(r.date);
@@ -113,22 +108,15 @@ export default async function handler(req, res) {
         healthDrinkByMonth[m] += r.amount;
       }
 
-      // Group by original Japanese name when available (consistent across scans),
-      // falling back to translated name for older records without it.
-      const canonicalKey = extractOriginal(r.notes) || r.name;
-
-      if (!itemAgg[canonicalKey]) itemAgg[canonicalKey] = { count: 0, total: 0, nameCounts: {} };
-      itemAgg[canonicalKey].count += 1;
-      itemAgg[canonicalKey].total += r.amount;
-      itemAgg[canonicalKey].nameCounts[r.name] = (itemAgg[canonicalKey].nameCounts[r.name] || 0) + 1;
+      // Group by the Chinese translated name (the 品項 title itself)
+      const key = r.name;
+      if (!itemAgg[key]) itemAgg[key] = { count: 0, total: 0 };
+      itemAgg[key].count += 1;
+      itemAgg[key].total += r.amount;
     }
 
     const topItems = Object.entries(itemAgg)
-      .map(([key, v]) => {
-        // Use the most frequently used translated name as the display label
-        const displayName = Object.entries(v.nameCounts).sort((a, b) => b[1] - a[1])[0][0];
-        return { name: displayName, count: v.count, total: v.total };
-      })
+      .map(([name, v]) => ({ name, count: v.count, total: v.total }))
       .sort((a, b) => b.count - a.count || b.total - a.total)
       .slice(0, 20);
 
