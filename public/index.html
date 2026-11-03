@@ -59,13 +59,13 @@
     }
 
     .nav-btn-group {
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: 12px;
       margin-bottom: 18px;
     }
 
     .nav-btn {
-      flex: 1;
       padding: 22px 12px;
       border: none;
       border-radius: 16px;
@@ -83,6 +83,59 @@
 
     .nav-btn .icon {
       font-size: 30px;
+    }
+
+    .norm-group {
+      border: 2px solid #ede4d9;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 14px;
+      background: #faf8f6;
+    }
+
+    .norm-group-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .norm-group-header input[type="checkbox"] {
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+      accent-color: #5a4a42;
+    }
+
+    .norm-group-header input[type="text"] {
+      flex: 1;
+      padding: 10px 12px;
+      border: 2px solid #dcc9bc;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #3a2a22;
+      background: white;
+    }
+
+    .norm-members {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-left: 32px;
+    }
+
+    .norm-member {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: #8b7b73;
+      padding: 4px 0;
+    }
+
+    .norm-member .arrow {
+      color: #b0a299;
+      margin: 0 6px;
     }
 
     .nav-btn:active {
@@ -636,6 +689,10 @@
           <span class="icon">📊</span>
           <span>月度分析</span>
         </button>
+        <button class="nav-btn" onclick="showNormalize()">
+          <span class="icon">🔧</span>
+          <span>整理品項</span>
+        </button>
       </div>
 
       <div class="card">
@@ -809,6 +866,36 @@
         </div>
       </div>
     </div>
+
+    <!-- NORMALIZE SCREEN -->
+    <div class="screen" id="normalizeScreen">
+      <div class="card">
+        <div style="font-size:14px; color:#8b7b73; line-height:1.6; margin-bottom:16px;">
+          系統會分析 Notion 內所有品項，把其實是同一種商品、但中文/日文名稱不一致的歸成一組，並建議統一的中文名稱。你可以逐組確認或修改，最後套用會更新舊資料。
+        </div>
+        <button class="btn btn-primary" style="width:100%;" id="analyzeBtn" onclick="runNormalizeAnalyze()">開始分析</button>
+        <div class="loading" id="normalizeLoading"><span class="spinner"></span>分析中，請稍候...</div>
+        <div class="error" id="normalizeError"></div>
+      </div>
+
+      <div id="normalizeGroupsCard" style="display:none;">
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h3 style="font-size:15px; color:#5a4a42;">建議合併對應</h3>
+            <span id="normalizeGroupCount" style="font-size:13px; color:#9d8b80;"></span>
+          </div>
+          <div style="font-size:13px; color:#9d8b80; margin-bottom:14px;">只顯示需要合併或改名的群組。勾選要套用的，可直接修改標準名稱。</div>
+          <div id="normalizeGroupsList"></div>
+        </div>
+
+        <div class="success" id="normalizeSuccess"></div>
+
+        <div class="button-group">
+          <button class="btn btn-secondary" onclick="toggleAllGroups()">全選 / 全不選</button>
+          <button class="btn btn-primary" id="applyBtn" onclick="applyNormalize()">套用到 Notion</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -859,6 +946,14 @@
     function showAnalysis() {
       switchScreen('analysisScreen', '📊 月度分析', '累積各月消費趨勢與排行', showHome);
       loadAnalysis();
+    }
+
+    function showNormalize() {
+      switchScreen('normalizeScreen', '🔧 整理品項', '合併同商品的不同名稱', showHome);
+      // reset state each time
+      document.getElementById('normalizeGroupsCard').style.display = 'none';
+      document.getElementById('normalizeError').classList.remove('show');
+      document.getElementById('normalizeSuccess').classList.remove('show');
     }
 
     // ---------- Home / Stats ----------
@@ -1406,6 +1501,148 @@
       } catch (err) {
         editError.textContent = err.message;
         editError.classList.add('show');
+      }
+    }
+
+    // ---------- Normalize (merge duplicate item names) ----------
+    let normalizeGroups = [];
+
+    async function runNormalizeAnalyze() {
+      const btn = document.getElementById('analyzeBtn');
+      const loading = document.getElementById('normalizeLoading');
+      const errorEl = document.getElementById('normalizeError');
+      const groupsCard = document.getElementById('normalizeGroupsCard');
+
+      btn.disabled = true;
+      loading.classList.add('show');
+      errorEl.classList.remove('show');
+      groupsCard.style.display = 'none';
+
+      try {
+        const response = await fetch('/api/normalize-analyze');
+        if (!response.ok) {
+          const e = await response.json().catch(() => ({}));
+          throw new Error(e.error || '分析失敗');
+        }
+        const data = await response.json();
+
+        // Only keep groups that need a change (merge or rename)
+        normalizeGroups = (data.groups || []).filter(g => g.needsChange);
+
+        if (normalizeGroups.length === 0) {
+          errorEl.textContent = '太好了，沒有發現需要合併或改名的品項！';
+          errorEl.classList.add('show');
+          loading.classList.remove('show');
+          btn.disabled = false;
+          return;
+        }
+
+        renderNormalizeGroups();
+        groupsCard.style.display = 'block';
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.classList.add('show');
+      } finally {
+        loading.classList.remove('show');
+        btn.disabled = false;
+      }
+    }
+
+    function renderNormalizeGroups() {
+      const list = document.getElementById('normalizeGroupsList');
+      document.getElementById('normalizeGroupCount').textContent = `${normalizeGroups.length} 組`;
+
+      list.innerHTML = normalizeGroups.map((g, idx) => {
+        const membersHtml = g.members.map(m => `
+          <div class="norm-member">
+            <span>中文「${m.name}」<span class="arrow">·</span>日文「${m.original || '(無)'}」</span>
+            <span>${m.count}次</span>
+          </div>
+        `).join('');
+
+        return `
+          <div class="norm-group">
+            <div class="norm-group-header">
+              <input type="checkbox" data-idx="${idx}" class="norm-check" checked>
+              <input type="text" data-idx="${idx}" class="norm-name" value="${g.canonicalName.replace(/"/g, '&quot;')}">
+            </div>
+            <div class="norm-members">${membersHtml}</div>
+          </div>
+        `;
+      }).join('');
+
+      // bind canonical name edits
+      list.querySelectorAll('.norm-name').forEach(el => {
+        el.addEventListener('input', (e) => {
+          normalizeGroups[e.target.dataset.idx].canonicalName = e.target.value;
+        });
+      });
+    }
+
+    function toggleAllGroups() {
+      const checks = document.querySelectorAll('.norm-check');
+      const allChecked = Array.from(checks).every(c => c.checked);
+      checks.forEach(c => { c.checked = !allChecked; });
+    }
+
+    async function applyNormalize() {
+      const applyBtn = document.getElementById('applyBtn');
+      const successEl = document.getElementById('normalizeSuccess');
+      const errorEl = document.getElementById('normalizeError');
+      successEl.classList.remove('show');
+      errorEl.classList.remove('show');
+
+      // Collect checked groups
+      const checks = document.querySelectorAll('.norm-check');
+      const selected = [];
+      checks.forEach(c => {
+        if (c.checked) {
+          const g = normalizeGroups[c.dataset.idx];
+          selected.push({
+            canonicalName: g.canonicalName,
+            members: g.members.map(m => ({ name: m.name, original: m.original }))
+          });
+        }
+      });
+
+      if (selected.length === 0) {
+        errorEl.textContent = '請至少勾選一組';
+        errorEl.classList.add('show');
+        return;
+      }
+
+      if (!confirm(`確定要套用 ${selected.length} 組合併嗎？這會更新 Notion 內的舊資料。`)) return;
+
+      applyBtn.disabled = true;
+      applyBtn.textContent = '套用中...';
+
+      try {
+        const response = await fetch('/api/normalize-apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mappings: selected })
+        });
+        if (!response.ok) {
+          const e = await response.json().catch(() => ({}));
+          throw new Error(e.error || '套用失敗');
+        }
+        const data = await response.json();
+
+        let msg = `完成！已更新 ${data.updated} 筆紀錄。`;
+        if (data.failures && data.failures.length > 0) {
+          msg += ` 有 ${data.failures.length} 筆失敗。`;
+        }
+        successEl.textContent = msg;
+        successEl.classList.add('show');
+
+        // re-analyze after a moment to refresh
+        setTimeout(() => runNormalizeAnalyze(), 1500);
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.classList.add('show');
+      } finally {
+        applyBtn.disabled = false;
+        applyBtn.textContent = '套用到 Notion';
       }
     }
 
