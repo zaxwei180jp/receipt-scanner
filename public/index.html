@@ -1350,7 +1350,7 @@
         // Trend chart
         const maxTotal = Math.max(...Object.values(data.monthlyTotal));
         const trendChart = document.getElementById('monthlyTrendChart');
-        trendChart.innerHTML = data.months.map(m => {
+        trendChart.innerHTML = [...data.months].reverse().map(m => {
           const total = data.monthlyTotal[m];
           const pct = maxTotal > 0 ? (total / maxTotal) * 100 : 0;
           return `
@@ -1377,12 +1377,14 @@
         }
 
         // Category table — matches all 8 main categories from CATEGORY_MAP
+        // Newest month on the left
+        const tableMonths = [...data.months].reverse();
         const table = document.getElementById('categoryMonthTable');
-        let html = '<tr><th>分類</th>' + data.months.map(m => `<th>${m}</th>`).join('') + '</tr>';
+        let html = '<tr><th>分類</th>' + tableMonths.map(m => `<th>${m}</th>`).join('') + '</tr>';
         data.mainCategories.forEach(cat => {
           const catData = data.mainCategoryByMonth[cat] || {};
           html += `<tr><td>${cat}</td>` +
-            data.months.map(m => `<td>¥${(catData[m] || 0).toLocaleString()}</td>`).join('') +
+            tableMonths.map(m => `<td>¥${(catData[m] || 0).toLocaleString()}</td>`).join('') +
             '</tr>';
         });
         table.innerHTML = html;
