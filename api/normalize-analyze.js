@@ -105,11 +105,18 @@ ${variantList}
 
     const parsed = JSON.parse(jsonMatch[0]);
 
-    // 4. Attach variant details to each group, only keep groups that actually merge
-    //    or where canonical differs from the current name
+    // 4. Attach variant details to each group.
+    //    A group only needs changing when it contains MORE THAN ONE distinct
+    //    Chinese name, or a member's Chinese name differs from the canonical.
+    //    If every member already shares the same Chinese name (matching the
+    //    canonical), statistics already group them — nothing to do, skip it,
+    //    even if the Japanese originals differ.
     const groups = (parsed.groups || []).map(g => {
       const members = g.members.map(idx => variants[idx]).filter(Boolean);
-      const needsChange = members.some(m => m.name !== g.canonicalName) || members.length > 1;
+      const distinctNames = new Set(members.map(m => m.name));
+      const needsChange =
+        distinctNames.size > 1 ||
+        members.some(m => m.name !== g.canonicalName);
       return {
         canonicalName: g.canonicalName,
         members,
